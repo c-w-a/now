@@ -1,11 +1,13 @@
 [package]
-name = "timely"
+name = "pingray"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1.0.99"
 chrono = "0.4.41"
+crossterm = { version = "0.28", features = ["event-stream"] }
 futures = "0.3.31"
+ratatui = "0.29"
 rsntp = { version = "4.0.0", features = ["chrono"] }
 tokio = { version = "1.47.1", features = ["full"] }
