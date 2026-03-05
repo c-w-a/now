@@ -10,4 +10,5 @@ crossterm = { version = "0.28", features = ["event-stream"] }
 futures = "0.3.31"
 ratatui = "0.29"
 rsntp = { version = "4.0.0", features = ["chrono"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 tokio = { version = "1.47.1", features = ["full"] }

@@ -15,6 +15,16 @@ mod probe;
 mod targets;
 mod ui;
 
+type Mode = (&'static str, fn() -> config::Config, &'static targets::TargetGroup);
+
+const MODES: &[Mode] = &[
+    ("dns",    config::Config::default_root_dns,   &targets::ROOT_DNS),
+    ("cctld",  config::Config::default_cctld,      &targets::CCTLD_DNS),
+    ("ntp",    config::Config::default_global_ntp,  &targets::GLOBAL_NTP),
+    ("ixp",    config::Config::default_ixp,         &targets::IXP_SERVERS),
+    ("ntp-ca", config::Config::default_canada,      &targets::CANADIAN_NTP),
+];
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // terminal setup
@@ -33,8 +43,15 @@ async fn main() -> Result<()> {
 }
 
 async fn run(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>) -> Result<()> {
-    let cfg = config::Config::default_canada();
-    let group = &targets::CANADIAN_NTP;
+    let arg = std::env::args().nth(1).unwrap_or_default();
+    let mut mode_idx = MODES.iter()
+        .position(|(name, _, _)| *name == arg)
+        .unwrap_or(0);
+
+    let (mut cfg, mut group) = {
+        let (_, mk_cfg, g) = &MODES[mode_idx];
+        (mk_cfg(), *g)
+    };
     let mut app = app::App::new(group);
 
     let (tx, mut rx) = mpsc::unbounded_channel();
@@ -53,8 +70,21 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>) -> Resu
             }
             Some(Ok(event)) = events.next() => {
                 if let Event::Key(key) = event {
-                    if key.code == KeyCode::Char('q') {
-                        break;
+                    match key.code {
+                        KeyCode::Char('q') => break,
+                        KeyCode::Tab => {
+                            mode_idx = (mode_idx + 1) % MODES.len();
+                            let (_, mk_cfg, g) = &MODES[mode_idx];
+                            cfg = mk_cfg();
+                            group = *g;
+                            app = app::App::new(group);
+
+                            // new channel kills old probe loop (send fails → breaks)
+                            let (new_tx, new_rx) = mpsc::unbounded_channel();
+                            rx = new_rx;
+                            probe::spawn_probe_loop(group.targets, new_tx, cfg.probe_timeout_ms, cfg.probe_interval_secs);
+                        }
+                        _ => {}
                     }
                 }
                 terminal.draw(|f| ui::draw(f, &app, &cfg))?;

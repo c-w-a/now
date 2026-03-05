@@ -37,7 +37,7 @@ pub fn draw(f: &mut Frame, app: &App, cfg: &Config) {
 
 fn draw_map(f: &mut Frame, area: Rect, app: &App, cfg: &Config) {
     let canvas = Canvas::default()
-        .block(Block::default().title(" Map ").borders(Borders::ALL))
+        .block(Block::default().title(format!(" {} ", app.group.name)).borders(Borders::ALL))
         .x_bounds([cfg.map_lon_min, cfg.map_lon_max])
         .y_bounds([cfg.map_lat_min, cfg.map_lat_max])
         .paint(|ctx| {
@@ -135,6 +135,6 @@ fn draw_log(f: &mut Frame, area: Rect, app: &App) {
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().title(" Log  [q] quit ").borders(Borders::ALL));
+        .block(Block::default().title(" Log  [tab] switch mode  [q] quit ").borders(Borders::ALL));
     f.render_widget(list, area);
 }
